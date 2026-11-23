@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chatterbox
+  labels: {app: chatterbox}
+spec:
+  # Keep at 1: chat state lives in process memory, so more replicas would
+  # split users into separate rooms. See README for the Redis path to scale out.
+  replicas: 1
+  selector:
+    matchLabels: {app: chatterbox}
+  template:
+    metadata:
+      labels: {app: chatterbox}
+    spec:
+      terminationGracePeriodSeconds: 15
+      containers:
+        - name: chatterbox
+          # Replace with your ECR image, e.g. 123456789012.dkr.ecr.us-east-1.amazonaws.com/chatterbox:v1
+          image: REPLACE_ME_ECR_URI/chatterbox:latest
+          ports:
+            - containerPort: 5000
+          env:
+            - {name: PORT, value: "5000"}
+          readinessProbe:
+            tcpSocket: {port: 5000}
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket: {port: 5000}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests: {cpu: 50m, memory: 64Mi}
+            limits: {cpu: 250m, memory: 128Mi}
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
